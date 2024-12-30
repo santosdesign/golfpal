@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Putting Drill</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .putting-green {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .outer-circle, .middle-circle, .inner-circle, .golf-hole {
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .outer-circle {
+            width: 400px;
+            height: 400px;
+            background: rgba(22, 163, 74, 0.2);
+            border: 2px solid #16a34a;
+        }
+
+        .middle-circle {
+            width: 300px;
+            height: 300px;
+            background: rgba(22, 163, 74, 0.4);
+            border: 2px solid #16a34a;
+        }
+
+        .inner-circle {
+            width: 200px;
+            height: 200px;
+            background: rgba(22, 163, 74, 0.6);
+            border: 2px solid #16a34a;
+        }
+
+        .golf-hole {
+            width: 20px;
+            height: 20px;
+            background: black;
+        }
+
+        .golf-ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #fff 70%, #e5e7eb 100%);
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            animation: drop 0.3s ease-out;
+        }
+
+        @keyframes drop {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center justify-center">
+    <div class="max-w-md w-full p-4 bg-white shadow-md rounded-lg space-y-4">
+        <!-- Header -->
+        <div class="text-center">
+            <h1 class="text-xl font-bold">Putting Drill</h1>
+            <p id="target-distance" class="text-sm text-gray-600">Target Distance: 15 feet</p>
+        </div>
+        <!-- Progress -->
+        <div class="flex justify-between items-center text-sm text-gray-600">
+            <span id="shots-remaining">Shots: 0 of 10</span>
+            <div class="relative w-1/2 h-2 bg-gray-300 rounded">
+                <div id="progress-bar" class="absolute h-2 bg-blue-500 rounded transition-all duration-300" style="width: 0%;"></div>
+            </div>
+        </div>
+        <!-- Putting Green -->
+        <div class="putting-green mx-auto" id="putting-green">
+            <div class="outer-circle"></div>
+            <div class="middle-circle"></div>
+            <div class="inner-circle"></div>
+            <div class="golf-hole"></div>
+        </div>
+        <!-- Feedback -->
+        <div id="feedback" class="text-center text-lg font-medium text-green-600 hidden"></div>
+        <!-- Buttons -->
+        <div class="flex justify-between space-x-4">
+            <button id="start-button" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Start Drill</button>
+            <button id="end-button" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled>End Drill</button>
+        </div>
+    </div>
+    <script>
+        // DOM Elements
+        const startButton = document.getElementById('start-button');
+        const endButton = document.getElementById('end-button');
+        const progressBar = document.getElementById('progress-bar');
+        const shotsRemaining = document.getElementById('shots-remaining');
+        const feedback = document.getElementById('feedback');
+        const puttingGreen = document.getElementById('putting-green');
+
+        // Variables
+        let isDrillActive = false;
+        let shots = 0;
+        const maxShots = 10;
+        const sessionData = [];
+
+        function startDrill() {
+            isDrillActive = true;
+            shots = 0;
+            sessionData.length = 0;
+            updateProgress();
+            clearFeedback();
+            enableEndButton();
+        }
+
+        function endDrill() {
+            isDrillActive = false;
+            disableEndButton();
+            sendSessionData();
+            showFeedback('Drill Ended! Session data sent.', true);
+        }
+
+        function updateProgress() {
+            shotsRemaining.textContent = `Shots: ${shots} of ${maxShots}`;
+            progressBar.style.width = `${(shots / maxShots) * 100}%`;
+        }
+
+        function clearFeedback() {
+            feedback.textContent = '';
+            feedback.classList.add('hidden');
+        }
+
+        function showFeedback(message, isComplete = false) {
+            feedback.textContent = message;
+            feedback.classList.remove('hidden');
+            feedback.classList.toggle('text-green-600', !isComplete);
+            feedback.classList.toggle('text-blue-600', isComplete);
+        }
+
+        function enableEndButton() {
+            endButton.disabled = false;
+            endButton.classList.remove('opacity-50');
+        }
+
+        function disableEndButton() {
+            endButton.disabled = true;
+            endButton.classList.add('opacity-50');
+        }
+
+        function calculateDistance(x, y) {
+            const rect = puttingGreen.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            return Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+        }
+
+        function calculateZone(distance) {
+            if (distance <= 20) return 'Zone 1 (Bullseye)';
+            if (distance <= 100) return 'Zone 2';
+            if (distance <= 150) return 'Zone 3';
+            return 'Zone 4';
+        }
+
+        function placeMarker(event) {
+            if (!isDrillActive || shots >= maxShots) return;
+
+            const rect = puttingGreen.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const golfBall = document.createElement('div');
+            golfBall.classList.add('golf-ball');
+            golfBall.style.left = `${x - 10}px`;
+            golfBall.style.top = `${y - 10}px`;
+            puttingGreen.appendChild(golfBall);
+
+            const distance = calculateDistance(x, y);
+            const zone = calculateZone(distance);
+            const feedbackMessage = `Missed by ${Math.round(distance)} units in ${zone}`;
+
+            showFeedback(feedbackMessage);
+
+            sessionData.push({ shot: shots + 1, x, y, distance, zone });
+            shots += 1;
+            updateProgress();
+
+            if (shots >= maxShots) {
+                endDrill();
+            }
+        }
+
+        function sendSessionData() {
+            fetch('https://xano.example.com/api/putting-drill', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sessionData),
+            }).then(response => console.log('Session data sent:', response));
+        }
+
+        puttingGreen.addEventListener('click', placeMarker);
+        startButton.addEventListener('click', startDrill);
+        endButton.addEventListener('click', endDrill);
+    </script>
+</body>
+</html>
